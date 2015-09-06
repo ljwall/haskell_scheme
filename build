@@ -1,3 +1,2 @@
 #!/usr/bin/env bash
-ghc --make -o bin/hscheme main.hs
-
+ghc --make -o bin/hscheme src/main.hs
