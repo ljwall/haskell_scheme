@@ -2,6 +2,7 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Numeric
 import Data.Char
+import Data.Array
 
 data LispVal = List [LispVal]
              | Atom String
@@ -11,6 +12,7 @@ data LispVal = List [LispVal]
              | String String
              | Bool Bool
              | Character Char
+             | Vector (Array Integer LispVal)
 
   deriving (Show)
 
@@ -49,13 +51,11 @@ parseBool = ((try $ string "#t") >> (return $ Bool True))
 
 data LispNumberBase = Dec | Hex | Oct | Bin
 parseBase :: Parser LispNumberBase
-parseBase = do
-  b <- (char '#' >> (oneOf "dxobDHOB") >>= (return . toLower)) <|> (return 'd')
-  return $ case b of
-    'x' -> Hex
-    'd' -> Dec
-    'o' -> Oct
-    'b' -> Bin
+parseBase = ((try . string $ "#x") >> return Hex)
+            <|> ((try . string $ "#d") >> return Dec)
+            <|> ((try . string $ "#o") >> return Oct)
+            <|> ((try . string $ "#b") >> return Bin)
+            <|> (return Dec)
 
 parseDecNumber :: Parser LispVal
 parseDecNumber = do
@@ -115,6 +115,11 @@ parseDottedList = do
   last_expr <- char '.' >> spaces >> parseExpr
   return $ DottedList head_expr_list last_expr
 
+parseVector :: Parser LispVal
+parseVector = do
+  expr_list <- sepBy parseExpr spaces
+  return . Vector . listArray (0, (toInteger. length $ expr_list) - 1) $ expr_list
+
 parseQuoted :: Parser LispVal
 parseQuoted = do
   char '\''
@@ -151,6 +156,11 @@ parseExpr = parseAtom
          <|> parseCommaExpr
          <|> do char '('
                 x <- (try parseList) <|> parseDottedList
+                char ')'
+                return x
+         <|> do char '#'
+                char '('
+                x <- parseVector
                 char ')'
                 return x
 
