@@ -98,13 +98,11 @@ parseNumber = do
 parseChar :: Parser LispVal
 parseChar = do
   try $ string "#\\"
-  expr <- (many1 anyChar)
-  return . Character $ if ((length expr) == 1)
-                       then (expr !! 0)
-                       else (case (map toLower expr) of
-                             "space" -> ' '
-                             "newline" -> '\n'
-                             "tab" -> '\t')
+  x <- (string "space" >> return ' ')
+        <|> (string "newline" >> return '\n')
+        <|> (string "tab" >> return '\t')
+        <|> anyChar
+  return . Character $ x
 
 parseList :: Parser LispVal
 parseList = do
@@ -123,6 +121,24 @@ parseQuoted = do
   x <- parseExpr
   return $ List [Atom "quote", x]
 
+parseBackQuoted :: Parser LispVal
+parseBackQuoted = do
+  char '`'
+  x <- parseExpr
+  return $ List [Atom "quasiquote", x]
+
+parseCommaExpr :: Parser LispVal
+parseCommaExpr = do
+  char ','
+  x <- parseExpr
+  return $ List [Atom "unquote", x]
+
+parseCommaAtExpr :: Parser LispVal
+parseCommaAtExpr = do
+  try $ char ',' >> char '@'
+  x <- parseExpr
+  return $ List [Atom "unquote-splicing", x]
+
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
          <|> parseString
@@ -130,6 +146,9 @@ parseExpr = parseAtom
          <|> parseBool
          <|> parseNumber
          <|> parseQuoted
+         <|> parseBackQuoted
+         <|> parseCommaAtExpr
+         <|> parseCommaExpr
          <|> do char '('
                 x <- (try parseList) <|> parseDottedList
                 char ')'
