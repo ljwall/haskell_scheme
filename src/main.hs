@@ -1,14 +1,15 @@
 import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import HSchemeParse
+import HSchemeEval
 
-readExpr :: String -> String
+readExpr :: String -> LispVal
 readExpr expression =
   case parse parseExpr "lisp" expression of
-    Left err -> "No match: " ++ (show err)
-    Right val -> "Match: " ++ (show val)
+    Left err -> String $ "No match: " ++ (show err)
+    Right val -> val
 
 main :: IO ()
 main = do
   fst_arg:other_args <- getArgs
-  putStrLn (readExpr fst_arg)
+  print . eval . readExpr $ fst_arg
