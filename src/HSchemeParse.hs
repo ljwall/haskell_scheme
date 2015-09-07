@@ -8,20 +8,34 @@ import Data.Array
 import HSchemeParse.LispVal
 import HSchemeParse.BasicValueParsers
 
+parseExprSeq :: Parser [LispVal]
+parseExprSeq = do
+  expr_list <- sepEndBy parseExpr spaces
+  return expr_list
+
+parseDotExpr :: Parser LispVal
+parseDotExpr = do
+  try (char '.' >> spaces)
+  parseExpr
+
 parseList :: Parser LispVal
 parseList = do
-  expr_list <- sepBy parseExpr spaces
-  return $ List expr_list
-
-parseDottedList :: Parser LispVal
-parseDottedList = do
-  head_expr_list <- endBy parseExpr spaces
-  last_expr <- char '.' >> spaces >> parseExpr
-  return $ DottedList head_expr_list last_expr
+  char '('
+  optional spaces
+  expr_list <- parseExprSeq
+  maybeDotExpr <- optionMaybe parseDotExpr
+  optional spaces
+  char ')'
+  return $ case maybeDotExpr of
+              Nothing -> List expr_list
+              Just dotExpr -> DottedList expr_list dotExpr
 
 parseVector :: Parser LispVal
 parseVector = do
-  expr_list <- sepBy parseExpr spaces
+  char '#'
+  char '('
+  expr_list <- parseExprSeq
+  char ')'
   return . Vector . listArray (0, (toInteger. length $ expr_list) - 1) $ expr_list
 
 parseQuoted :: Parser LispVal
@@ -58,12 +72,5 @@ parseExpr = parseAtom
          <|> parseBackQuoted
          <|> parseCommaAtExpr
          <|> parseCommaExpr
-         <|> do char '('
-                x <- (try parseList) <|> parseDottedList
-                char ')'
-                return x
-         <|> do char '#'
-                char '('
-                x <- parseVector
-                char ')'
-                return x
+         <|> parseList
+         <|> parseVector
