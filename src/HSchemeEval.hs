@@ -25,7 +25,67 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("/", floatBinaryOp (/)),
               ("mod", integerBinaryOp mod),
               ("quotent", integerBinaryOp quot),
-              ("remainder", integerBinaryOp rem)]
+              ("remainder", integerBinaryOp rem),
+              ("typeof", singleParamWrapper typeOf),
+              ("symbol?", singleParamWrapper isAtom),
+              ("float?", singleParamWrapper isFloat),
+              ("integer?", singleParamWrapper isInteger),
+              ("string?", singleParamWrapper isString),
+              ("boolean?", singleParamWrapper isBool),
+              ("char?", singleParamWrapper isChar),
+              ("list?", singleParamWrapper isList),
+              ("vector?", singleParamWrapper isVector)]
+
+
+singleParamWrapper :: (LispVal -> LispVal) -> [LispVal] -> LispVal
+singleParamWrapper fn xs =
+  case (length xs) of
+    1 -> fn (xs !! 0)
+    -- otherwise -> failiur somehow?
+
+typeOf :: LispVal -> LispVal
+typeOf expr = case expr of
+  Atom _ -> String "Symbol"
+  Integer _ -> String "Integer"
+  Float _ -> String "Float"
+  String _ -> String "String"
+  Bool _ -> String "Boolean"
+  Character _ -> String "Character"
+  List _ -> String "List"
+  DottedList _ _ -> String "DottedList"
+  Vector _ -> String "Vector"
+
+isList :: LispVal -> LispVal
+isList (List _) = Bool True
+isList _ = Bool False
+
+isVector :: LispVal -> LispVal
+isVector (Vector _) = Bool True
+isVector _ = Bool False
+
+isFloat :: LispVal -> LispVal
+isFloat (Float _) = Bool True
+isFloat _ = Bool False
+
+isInteger :: LispVal -> LispVal
+isInteger (Integer _) = Bool True
+isInteger _ = Bool False
+
+isString :: LispVal -> LispVal
+isString (String _) = Bool True
+isString _ = Bool False
+
+isAtom :: LispVal -> LispVal
+isAtom (Atom _) = Bool True
+isAtom _ = Bool False
+
+isBool :: LispVal -> LispVal
+isBool (Bool _) = Bool True
+isBool _ = Bool False
+
+isChar :: LispVal -> LispVal
+isChar (Character _) = Bool True
+isChar _ = Bool False
 
 data LispNumType =  LTFloat | LTInteger -- Ordering is importan here
   deriving (Eq, Ord)
