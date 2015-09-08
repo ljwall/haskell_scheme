@@ -58,18 +58,18 @@ parseDecNumber = do
   int_part <- many1 digit
   dec_part <- (try ((char '.') >> (many1 digit))) <|> (return "")
   return $  if (0 == (length dec_part))
-              then Number . read $ int_part
+              then Integer . read $ int_part
               else Float . fst . (!!0) . readFloat $ (int_part ++ "." ++ dec_part)
 
 parseHexNumber :: Parser LispVal
 parseHexNumber = do
   num <- many1 hexDigit
-  return . Number . fst . (!!0) . readHex $ num
+  return . Integer . fst . (!!0) . readHex $ num
 
 parseOctNumber :: Parser LispVal
 parseOctNumber = do
   num <- many1 octDigit
-  return . Number . fst . (!!0) . readOct $ num
+  return . Integer . fst . (!!0) . readOct $ num
 
 readBin :: String -> Integer
 readBin str = foldl fn 0 str
@@ -80,7 +80,7 @@ readBin str = foldl fn 0 str
 parseBinNumber :: Parser LispVal
 parseBinNumber = do
   num <- many1 $ oneOf "01"
-  return . Number . readBin $ num
+  return . Integer . readBin $ num
 
 parseNumber :: Parser LispVal
 parseNumber = do

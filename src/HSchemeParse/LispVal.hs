@@ -6,7 +6,7 @@ import Data.Array
 data LispVal = List [LispVal]
              | Atom String
              | DottedList [LispVal] LispVal
-             | Number Integer
+             | Integer Integer
              | Float Float
              | String String
              | Bool Bool
@@ -15,7 +15,7 @@ data LispVal = List [LispVal]
 
 showVal :: LispVal -> String
 showVal (Atom x) = x
-showVal (Number val) = show val
+showVal (Integer val) = show val
 showVal (Float val) = show val
 showVal (String str) = "\"" ++ str ++ "\""
 showVal (Bool True) = "#t"
