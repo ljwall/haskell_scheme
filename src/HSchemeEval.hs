@@ -34,7 +34,9 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("boolean?", singleParamWrapper isBool),
               ("char?", singleParamWrapper isChar),
               ("list?", singleParamWrapper isList),
-              ("vector?", singleParamWrapper isVector)]
+              ("vector?", singleParamWrapper isVector),
+              ("symbol->string", singleParamWrapper symbolToString),
+              ("string->symbol", singleParamWrapper stringToSymbol)]
 
 
 singleParamWrapper :: (LispVal -> LispVal) -> [LispVal] -> LispVal
@@ -42,6 +44,12 @@ singleParamWrapper fn xs =
   case (length xs) of
     1 -> fn (xs !! 0)
     -- otherwise -> failiur somehow?
+
+symbolToString :: LispVal -> LispVal
+symbolToString (Atom x) = String x
+
+stringToSymbol :: LispVal -> LispVal
+stringToSymbol (String x) = Atom x
 
 typeOf :: LispVal -> LispVal
 typeOf expr = case expr of
