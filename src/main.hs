@@ -1,7 +1,9 @@
 import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
+import Control.Monad.Except
 import HSchemeParse
 import HSchemeEval
+import LispError
 
 readExpr :: String -> LispVal
 readExpr expression =
@@ -12,4 +14,5 @@ readExpr expression =
 main :: IO ()
 main = do
   fst_arg:other_args <- getArgs
-  print . eval . readExpr $ fst_arg
+  let result = (eval . readExpr $ fst_arg) `catchError` (\err -> return $ String (show err))
+  print $ extractValue result

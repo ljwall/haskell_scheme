@@ -1,24 +1,27 @@
 module HSchemeEval (eval) where
 
 import HSchemeParse.LispVal
+import LispError
+import Control.Monad.Except
+import Control.Monad
 
-eval :: LispVal -> LispVal
-eval val@(Integer _) = val
-eval val@(Float _) = val
-eval val@(String _) = val
-eval val@(Bool _) = val
-eval val@(Character _) = val
-eval (List [Atom "quote", val]) = val
+eval :: LispVal -> ThrowsLispError LispVal
+eval val@(Integer _) = return val
+eval val@(Float _) = return val
+eval val@(String _) = return val
+eval val@(Bool _) = return val
+eval val@(Character _) = return val
+eval (List [Atom "quote", val]) = return val
 
-eval (List ((Atom func):args)) = apply func (map eval args)
+eval (List ((Atom func):args)) = (mapM eval $ args) >>= apply func
 
-apply :: String -> [LispVal] -> LispVal
+apply :: String -> [LispVal] -> ThrowsLispError LispVal
 apply func args =
   case (lookup func primitives) of
     Just fn -> fn args
-    Nothing -> Bool False
+    Nothing -> throwError $ NotFunction "Unrecognised function" func
 
-primitives :: [(String, [LispVal] -> LispVal)]
+primitives :: [(String, [LispVal] -> ThrowsLispError LispVal)]
 primitives = [("+", closedBinaryNumeric (+) (+)),
               ("*", closedBinaryNumeric (*) (*)),
               ("-", closedBinaryNumeric (-) (-)),
@@ -35,21 +38,26 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("char?", singleParamWrapper isChar),
               ("list?", singleParamWrapper isList),
               ("vector?", singleParamWrapper isVector),
-              ("symbol->string", singleParamWrapper symbolToString),
-              ("string->symbol", singleParamWrapper stringToSymbol)]
+              ("symbol->string", singleParamWithTypeCheckWrapper symbolToString),
+              ("string->symbol", singleParamWithTypeCheckWrapper stringToSymbol)]
 
-
-singleParamWrapper :: (LispVal -> LispVal) -> [LispVal] -> LispVal
-singleParamWrapper fn xs =
+singleParamWithTypeCheckWrapper :: (LispVal -> ThrowsLispError LispVal) -> [LispVal]
+                                        -> ThrowsLispError LispVal
+singleParamWithTypeCheckWrapper fn xs =
   case (length xs) of
     1 -> fn (xs !! 0)
-    -- otherwise -> failiur somehow?
+    otherwise -> throwError $ NumArgs 1 xs
 
-symbolToString :: LispVal -> LispVal
-symbolToString (Atom x) = String x
+singleParamWrapper :: (LispVal -> LispVal) -> [LispVal] -> ThrowsLispError LispVal
+singleParamWrapper fn = singleParamWithTypeCheckWrapper (return . fn)
 
-stringToSymbol :: LispVal -> LispVal
-stringToSymbol (String x) = Atom x
+symbolToString :: LispVal -> ThrowsLispError LispVal
+symbolToString (Atom x) = return $ String x
+symbolToString x = throwError $ TypeMismatch "Symbol" x
+
+stringToSymbol :: LispVal -> ThrowsLispError LispVal
+stringToSymbol (String x) = return $ Atom x
+stringToSymbol x = throwError $ TypeMismatch "String" x
 
 typeOf :: LispVal -> LispVal
 typeOf expr = case expr of
@@ -95,35 +103,51 @@ isChar :: LispVal -> LispVal
 isChar (Character _) = Bool True
 isChar _ = Bool False
 
-data LispNumType =  LTFloat | LTInteger -- Ordering is importan here
-  deriving (Eq, Ord)
-
-lispNumType :: LispVal -> Maybe LispNumType
-lispNumType x = case x of
-  (Float _) -> (Just LTFloat)
-  (Integer _) -> (Just LTInteger)
-  otherwise -> Nothing
-
-allLispNumType :: [LispVal] -> Maybe LispNumType
-allLispNumType = minimum . map lispNumType
+-- data LispNumType =  LTFloat | LTInteger -- Ordering is importan here
+--   deriving (Eq, Ord)
+--
+-- lispNumType :: LispVal -> Maybe LispNumType
+-- lispNumType x = case x of
+--   (Float _) -> (Just LTFloat)
+--   (Integer _) -> (Just LTInteger)
+--   otherwise -> Nothing
+--
+-- allLispNumType :: [LispVal] -> Maybe LispNumType
+-- allLispNumType = minimum . map lispNumType
 
 type BinOp a = (a -> a -> a)
-closedBinaryNumeric :: (BinOp Float) -> (BinOp Integer) -> [LispVal] -> LispVal
+closedBinaryNumeric :: (BinOp Float) -> (BinOp Integer) -> [LispVal] -> ThrowsLispError LispVal
 closedBinaryNumeric floatOp integerOp xs =
-  case (allLispNumType xs) of
-    (Just LTFloat) -> Float . foldl1 floatOp . map unpackFloat $ xs
-    (Just LTInteger) -> Integer . foldl1 integerOp . map unpackInteger $ xs
-    otherwise -> Integer 0 -- Should Error
+  case (head xs) of
+    x@(Integer _) -> do unpacked_xs <- (mapM unpackInteger xs)
+                        let val = foldl1 integerOp unpacked_xs
+                        return $ Integer val
+    x@(Float _) -> do unpacked_xs <- (mapM unpackFloat xs)
+                      let val = foldl1 floatOp unpacked_xs
+                      return $ Float val
+    x@otherwise -> throwError $ TypeMismatch "Numeric" x
+-- closedBinaryNumeric :: (BinOp Float) -> (BinOp Integer) -> [LispVal] -> ThrowsLispError LispVal
+-- closedBinaryNumeric floatOp integerOp xs =
+--   case (allLispNumType xs) of
+--     (Just LTFloat) -> return . Float . foldl1 floatOp . map (extractValue. unpackFloat) $ xs
+--     (Just LTInteger) -> return . Integer . foldl1 integerOp . map (extractValue. unpackInteger) $ xs
+--     otherwise -> throwError $ TypeMismatch "all numerics" "non-numerics"
 
-integerBinaryOp :: (BinOp Integer) -> [LispVal] -> LispVal
-integerBinaryOp op = Integer . foldl1 op . map unpackInteger
+integerBinaryOp :: (BinOp Integer) -> [LispVal] -> ThrowsLispError LispVal
+integerBinaryOp op xs = case (foldl1 (liftM2 op) . map unpackInteger $ xs) of
+  Left err -> throwError err
+  Right result -> return $ Integer result
 
-floatBinaryOp :: (BinOp Float) -> [LispVal] -> LispVal
-floatBinaryOp op = Float . foldl1 op . map unpackFloat
+floatBinaryOp :: (BinOp Float) -> [LispVal] -> ThrowsLispError LispVal
+floatBinaryOp op xs = case (foldl1 (liftM2 op) . map unpackFloat $ xs) of
+  Left err -> throwError err
+  Right result -> return $ Float result
 
-unpackInteger :: LispVal -> Integer
-unpackInteger (Integer x) = x
+unpackInteger :: LispVal -> ThrowsLispError Integer
+unpackInteger (Integer x) =  return x
+unpackInteger x = throwError $ TypeMismatch "Integer" x
 
-unpackFloat :: LispVal -> Float
-unpackFloat (Integer x) = fromInteger x
-unpackFloat (Float x) = x
+unpackFloat :: LispVal -> ThrowsLispError Float
+unpackFloat (Integer x) = return $ fromInteger x
+unpackFloat (Float x) = return x
+unpackFloat x = throwError $ TypeMismatch "Float or Integer" x
