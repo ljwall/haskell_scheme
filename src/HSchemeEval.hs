@@ -103,18 +103,6 @@ isChar :: LispVal -> LispVal
 isChar (Character _) = Bool True
 isChar _ = Bool False
 
--- data LispNumType =  LTFloat | LTInteger -- Ordering is importan here
---   deriving (Eq, Ord)
---
--- lispNumType :: LispVal -> Maybe LispNumType
--- lispNumType x = case x of
---   (Float _) -> (Just LTFloat)
---   (Integer _) -> (Just LTInteger)
---   otherwise -> Nothing
---
--- allLispNumType :: [LispVal] -> Maybe LispNumType
--- allLispNumType = minimum . map lispNumType
-
 type BinOp a = (a -> a -> a)
 closedBinaryNumeric :: (BinOp Float) -> (BinOp Integer) -> [LispVal] -> ThrowsLispError LispVal
 closedBinaryNumeric floatOp integerOp xs =
@@ -126,12 +114,6 @@ closedBinaryNumeric floatOp integerOp xs =
                       let val = foldl1 floatOp unpacked_xs
                       return $ Float val
     x@otherwise -> throwError $ TypeMismatch "Numeric" x
--- closedBinaryNumeric :: (BinOp Float) -> (BinOp Integer) -> [LispVal] -> ThrowsLispError LispVal
--- closedBinaryNumeric floatOp integerOp xs =
---   case (allLispNumType xs) of
---     (Just LTFloat) -> return . Float . foldl1 floatOp . map (extractValue. unpackFloat) $ xs
---     (Just LTInteger) -> return . Integer . foldl1 integerOp . map (extractValue. unpackInteger) $ xs
---     otherwise -> throwError $ TypeMismatch "all numerics" "non-numerics"
 
 integerBinaryOp :: (BinOp Integer) -> [LispVal] -> ThrowsLispError LispVal
 integerBinaryOp op xs = case (foldl1 (liftM2 op) . map unpackInteger $ xs) of
