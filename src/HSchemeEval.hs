@@ -39,7 +39,49 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("list?", singleParamWrapper isList),
               ("vector?", singleParamWrapper isVector),
               ("symbol->string", singleParamWithTypeCheckWrapper symbolToString),
-              ("string->symbol", singleParamWithTypeCheckWrapper stringToSymbol)]
+              ("string->symbol", singleParamWithTypeCheckWrapper stringToSymbol),
+              ("&&", boolBoolBinOp (&&)),
+              ("||", boolBoolBinOp (||)),
+              ("string=?" , strBoolBinOp (==)),
+              ("string>=?" , strBoolBinOp (>=)),
+              ("string<=?" , strBoolBinOp (<=)),
+              ("string>?" , strBoolBinOp (>)),
+              ("string<?" , strBoolBinOp (<)),
+              ("=", numBoolBinOp (==) (==)),
+              ("<=", numBoolBinOp (<=) (<=)),
+              (">=", numBoolBinOp (>=) (>=)),
+              (">", numBoolBinOp (>) (>)),
+              ("<", numBoolBinOp (<) (<))]
+
+
+boolBinOp :: (LispVal -> ThrowsLispError a) -> (a -> a -> Bool)
+                -> [LispVal] -> (ThrowsLispError LispVal)
+boolBinOp unpack op xs =
+  case (length xs) of
+    2 ->  do b <- (liftM2 op (unpack $ xs !! 0) (unpack $ xs !! 1))
+             return $ Bool b
+    otherwise -> throwError $ NumArgs 2 xs
+
+unpackBool :: LispVal -> ThrowsLispError Bool
+unpackBool (Bool b) = return b
+unpackBool x = throwError $ TypeMismatch "Boolean" x
+
+boolBoolBinOp :: (Bool -> Bool -> Bool) -> [LispVal] -> (ThrowsLispError LispVal)
+boolBoolBinOp = boolBinOp unpackBool
+
+unpackString :: LispVal -> ThrowsLispError String
+unpackString (String s) = return s
+unpackString x = throwError $ TypeMismatch "String" x
+
+strBoolBinOp :: (String -> String -> Bool) -> [LispVal] -> (ThrowsLispError LispVal)
+strBoolBinOp = boolBinOp unpackString
+
+numBoolBinOp :: (Float -> Float -> Bool)
+                  -> (Integer -> Integer -> Bool)
+                  -> [LispVal] -> (ThrowsLispError LispVal)
+numBoolBinOp fop iop xs@((Integer x):rest) = boolBinOp unpackInteger iop xs
+numBoolBinOp fop iop xs@((Float x):rest) = boolBinOp unpackFloat fop xs
+numBoolBinOp _ _ (x:rest) = throwError $ TypeMismatch "Numeric" x
 
 singleParamWithTypeCheckWrapper :: (LispVal -> ThrowsLispError LispVal) -> [LispVal]
                                         -> ThrowsLispError LispVal
