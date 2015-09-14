@@ -57,7 +57,30 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("<=", numBoolBinOp (<=) (<=)),
               (">=", numBoolBinOp (>=) (>=)),
               (">", numBoolBinOp (>) (>)),
-              ("<", numBoolBinOp (<) (<))]
+              ("<", numBoolBinOp (<) (<)),
+              ("car", car),
+              ("cdr", cdr),
+              ("cons", cons)]
+
+
+car :: [LispVal] -> ThrowsLispError LispVal
+car [List (x:_)] = return x
+car [DottedList (x:_) _] = return x
+car [x] = throwError $ TypeMismatch "pair" x
+car x = throwError $ NumArgs 1 x
+
+cdr :: [LispVal] -> ThrowsLispError LispVal
+cdr [List (_:xs)] = return $ List xs
+cdr [DottedList [_] x] = return x
+cdr [DottedList (_:xs) x] = return $ DottedList xs x
+cdr [x] = throwError $ TypeMismatch "pair" x
+cdr x = throwError $ NumArgs 1 x
+
+cons :: [LispVal] -> ThrowsLispError LispVal
+cons [x, (List xs)] = return $ List (x:xs)
+cons [x, (DottedList xs y)] = return $ DottedList (x:xs) y
+cons [x, y] = return $ DottedList [x] y
+cons xs = throwError $ NumArgs 2 xs
 
 
 boolBinOp :: (LispVal -> ThrowsLispError a) -> (a -> a -> Bool)
