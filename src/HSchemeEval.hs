@@ -17,7 +17,8 @@ eval (List [Atom "if", predicate, trueExpr, falseExpr]) =
   do b <- eval predicate
      case b of
        Bool True -> eval trueExpr
-       otherwise -> eval falseExpr
+       Bool False -> eval falseExpr
+       x -> throwError $ TypeMismatch "Bool" x
 
 eval (List ((Atom func):args)) = (mapM eval $ args) >>= apply func
 
