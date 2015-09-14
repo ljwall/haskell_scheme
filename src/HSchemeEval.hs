@@ -43,7 +43,7 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("boolean?", singleParamWrapper isBool),
               ("char?", singleParamWrapper isChar),
               ("list?", singleParamWrapper isList),
-              ("vector?", singleParamWrapper isVector),
+              -- ("vector?", singleParamWrapper isVector),
               ("symbol->string", singleParamWithTypeCheckWrapper symbolToString),
               ("string->symbol", singleParamWithTypeCheckWrapper stringToSymbol),
               ("&&", boolBoolBinOp (&&)),
@@ -60,8 +60,27 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("<", numBoolBinOp (<) (<)),
               ("car", car),
               ("cdr", cdr),
-              ("cons", cons)]
+              ("cons", cons),
+              ("eqv?", eqv),
+              ("eq?", eqv)]
 
+
+eqv :: [LispVal] -> ThrowsLispError LispVal
+eqv [Atom x, Atom y] = return $ Bool (x==y)
+eqv [Integer x, Integer y] = return $ Bool (x==y)
+eqv [Float x, Float y] = return $ Bool (x==y)
+eqv [String x, String y] = return $ Bool (x==y)
+eqv [Bool x, Bool y] = return $ Bool (x==y)
+eqv [Character x, Character y] = return $ Bool (x==y)
+eqv [DottedList xs x, DottedList ys y] = eqv [List (x:xs), List (y:ys)]
+
+eqv [List xs, List ys] = return $ Bool $ (length xs)==(length ys) && itemsEqv
+  where itemsEqv = all pairEqv $ zip xs ys
+                    where pairEqv (x, y) = case (eqv [x, y]) of
+                                            Left _ -> False
+                                            Right (Bool t) -> t
+eqv [_, _] = return $ Bool False
+eqv bad = throwError $ NumArgs 2 bad
 
 car :: [LispVal] -> ThrowsLispError LispVal
 car [List (x:_)] = return x
@@ -140,15 +159,15 @@ typeOf expr = case expr of
   Character _ -> String "Character"
   List _ -> String "List"
   DottedList _ _ -> String "DottedList"
-  Vector _ -> String "Vector"
+  -- Vector _ -> String "Vector"
 
 isList :: LispVal -> LispVal
 isList (List _) = Bool True
 isList _ = Bool False
 
-isVector :: LispVal -> LispVal
-isVector (Vector _) = Bool True
-isVector _ = Bool False
+-- isVector :: LispVal -> LispVal
+-- isVector (Vector _) = Bool True
+-- isVector _ = Bool False
 
 isFloat :: LispVal -> LispVal
 isFloat (Float _) = Bool True

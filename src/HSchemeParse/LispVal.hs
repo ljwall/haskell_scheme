@@ -11,7 +11,7 @@ data LispVal = List [LispVal]
              | String String
              | Bool Bool
              | Character Char
-             | Vector (Array Integer LispVal)
+             -- | Vector (Array Integer LispVal)
 
 showVal :: LispVal -> String
 showVal (Atom x) = x
@@ -24,6 +24,6 @@ showVal (Character ch) = "#\\" ++ [ch]
 showVal (List xs) = "(" ++ (unwords . map showVal $ xs) ++ ")"
 showVal (DottedList xs expr) =
   "(" ++ (unwords . map showVal $ xs) ++ " . " ++ (show expr) ++ ")"
-showVal (Vector xs) = "#(" ++ (unwords . map showVal . elems $ xs) ++ ")"
+-- showVal (Vector xs) = "#(" ++ (unwords . map showVal . elems $ xs) ++ ")"
 
 instance Show LispVal where show = showVal

@@ -30,13 +30,13 @@ parseList = do
               Nothing -> List expr_list
               Just dotExpr -> DottedList expr_list dotExpr
 
-parseVector :: Parser LispVal
-parseVector = do
-  char '#'
-  char '('
-  expr_list <- parseExprSeq
-  char ')'
-  return . Vector . listArray (0, (toInteger. length $ expr_list) - 1) $ expr_list
+-- parseVector :: Parser LispVal
+-- parseVector = do
+--   char '#'
+--   char '('
+--   expr_list <- parseExprSeq
+--   char ')'
+--   return . Vector . listArray (0, (toInteger. length $ expr_list) - 1) $ expr_list
 
 parseQuoted :: Parser LispVal
 parseQuoted = do
@@ -73,4 +73,4 @@ parseExpr = parseAtom
          <|> parseCommaAtExpr
          <|> parseCommaExpr
          <|> parseList
-         <|> parseVector
+         -- <|> parseVector
