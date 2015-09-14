@@ -13,6 +13,12 @@ eval val@(Bool _) = return val
 eval val@(Character _) = return val
 eval (List [Atom "quote", val]) = return val
 
+eval (List [Atom "if", predicate, trueExpr, falseExpr]) =
+  do b <- eval predicate
+     case b of
+       Bool True -> eval trueExpr
+       otherwise -> eval falseExpr
+
 eval (List ((Atom func):args)) = (mapM eval $ args) >>= apply func
 
 apply :: String -> [LispVal] -> ThrowsLispError LispVal
