@@ -62,7 +62,8 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("cdr", cdr),
               ("cons", cons),
               ("eqv?", eqv),
-              ("eq?", eqv)]
+              ("eq?", eqv),
+              ("equal?", eqv)]
 
 
 eqv :: [LispVal] -> ThrowsLispError LispVal
