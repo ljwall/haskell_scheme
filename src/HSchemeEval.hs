@@ -65,7 +65,8 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("eqv?", eqv),
               ("eq?", eqv),
               ("equal?", eqv),
-              ("string", string)]
+              ("string", string),
+              ("string-length", stringLength)]
 
 
 string :: [LispVal] -> ThrowsLispError LispVal
@@ -75,6 +76,10 @@ string xs = foldM strAppend "" xs >>= (return . String)
                                 (Character c) -> return $ acc++[c]
                                 x -> throwError $ TypeMismatch "Char" x
 
+stringLength :: [LispVal] -> ThrowsLispError LispVal
+stringLength [String str] = return $ Integer (fromIntegral . length $ str)
+stringLength [x] = throwError $ TypeMismatch "String" x
+stringLength xs = throwError $ NumArgs 1 xs
 
 eqv :: [LispVal] -> ThrowsLispError LispVal
 eqv [Atom x, Atom y] = return $ Bool (x==y)
