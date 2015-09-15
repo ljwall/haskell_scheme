@@ -64,7 +64,16 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("cons", cons),
               ("eqv?", eqv),
               ("eq?", eqv),
-              ("equal?", eqv)]
+              ("equal?", eqv),
+              ("string", string)]
+
+
+string :: [LispVal] -> ThrowsLispError LispVal
+string xs = foldM strAppend "" xs >>= (return . String)
+    where strAppend :: String -> LispVal -> ThrowsLispError String
+          strAppend acc next = case next of
+                                (Character c) -> return $ acc++[c]
+                                x -> throwError $ TypeMismatch "Char" x
 
 
 eqv :: [LispVal] -> ThrowsLispError LispVal
