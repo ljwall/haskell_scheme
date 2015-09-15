@@ -66,7 +66,8 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("eq?", eqv),
               ("equal?", eqv),
               ("string", string),
-              ("string-length", stringLength)]
+              ("string-length", stringLength),
+              ("string-ref", stringRef)]
 
 
 string :: [LispVal] -> ThrowsLispError LispVal
@@ -80,6 +81,16 @@ stringLength :: [LispVal] -> ThrowsLispError LispVal
 stringLength [String str] = return $ Integer (fromIntegral . length $ str)
 stringLength [x] = throwError $ TypeMismatch "String" x
 stringLength xs = throwError $ NumArgs 1 xs
+
+stringRef :: [LispVal] ->  ThrowsLispError LispVal
+stringRef [String _, Integer n] | n<0 = throwError $ Default "Negative index"
+stringRef [String [], Integer n] = throwError $ Default "Index out of range"
+stringRef [String str, Integer 0] = return $ Character (head str)
+stringRef [String str, Integer n] = stringRef [String (tail str), Integer (n-1)]
+stringRef vals@[_, _] = throwError $ TypeMismatch "(String, Integer)" (List vals)
+stringRef xs = throwError $ NumArgs 2 xs
+
+
 
 eqv :: [LispVal] -> ThrowsLispError LispVal
 eqv [Atom x, Atom y] = return $ Bool (x==y)
