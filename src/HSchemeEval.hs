@@ -22,6 +22,8 @@ eval (List [Atom "if", predicate, trueExpr, falseExpr]) =
 
 eval (List ((Atom func):args)) = (mapM eval $ args) >>= apply func
 
+eval x = throwError $ Default $ "Much bafflement evaluating " ++ (show x)
+
 apply :: String -> [LispVal] -> ThrowsLispError LispVal
 apply func args =
   case (lookup func primitives) of
