@@ -1,5 +1,5 @@
 import Text.ParserCombinators.Parsec hiding (spaces)
-import Control.Monad.Except
+import Control.Monad.Except (catchError, throwError)
 import HSchemeParse
 import HSchemeEval
 import LispError
