@@ -26,12 +26,9 @@ processInput :: Env -> String -> InputT IO ()
 processInput env expr =
   (liftIO $ evalExpr env expr) >>= (return . show) >>= outputStrLn
 
-nullEnv :: IO Env
-nullEnv = newIORef []
-
 main :: IO ()
 main =
-  runInputT defaultSettings (liftIO nullEnv >>= loop)
+  runInputT defaultSettings (liftIO primitivesEnv >>= loop)
     where
       loop :: Env -> InputT IO ()
       loop env = do

@@ -1,11 +1,9 @@
-module HSchemeEval (eval, Env) where
+module HSchemeEval (eval, Env, primitivesEnv) where
 
 import LispVal
 import Control.Monad.Except
 import Control.Monad
 import Data.IORef (IORef, readIORef, writeIORef, newIORef)
-
-type Env = IORef [(String, IORef LispVal)]
 
 eval :: Env -> LispVal -> IOThrowsLispError LispVal
 eval _ val@(Integer _) = return val
@@ -23,21 +21,40 @@ eval env (List [Atom "if", predicate, trueExpr, falseExpr]) =
        x -> throwError $ TypeMismatch "Bool" x
 
 eval env (Atom x) = getVar env x
+
+eval env (List (Atom "define" : List (Atom fnName : params) : body)) =
+  makeNormalFunc env params body >>= defineVar env fnName
+
+eval env (List (Atom "lambda" : List params : body)) =
+  makeNormalFunc env params body
+
 eval env (List ((Atom "define"):(Atom varName):expr:[])) =
   eval env expr >>= defineVar env varName
 
 eval env (List ((Atom "set!"):(Atom varName):expr:[])) =
   eval env expr >>= setVar env varName
 
-eval env (List ((Atom func):args)) = (mapM (eval env) $ args) >>= apply env func
+eval env (List (fnExpr:args)) = do
+  fn <- eval env fnExpr
+  evaldArgs <- (mapM (eval env) $ args)
+  apply fn evaldArgs
 
 eval _ x = throwError $ Default $ "Much bafflement evaluating " ++ (show x)
 
-apply :: Env -> String -> [LispVal] -> IOThrowsLispError LispVal
-apply _ func args =
-  case (lookup func primitives) of
-    Just fn -> liftThrows $ fn args
-    Nothing -> throwError $ NotFunction "Unrecognised function" func
+apply :: LispVal -> [LispVal] -> IOThrowsLispError LispVal
+apply (PrimativeFunc fn) args = liftThrows $ fn args
+apply (Func params varargs body closure) args =
+  (liftIO . bindVars closure $ zip params args) >>= evalBody
+    where evalBody :: Env -> IOThrowsLispError LispVal
+          evalBody env = liftM last $ mapM (eval env) body
+apply nonFunc _ = throwError $ NotFunction "Does not evaluate to a function" (show nonFunc)
+
+makeFunc :: (Maybe String) -> Env -> [LispVal] -> [LispVal] -> IOThrowsLispError LispVal
+makeFunc varargs env params body = return $ Func (map show params) varargs body env
+makeNormalFunc ::  Env -> [LispVal] -> [LispVal] -> IOThrowsLispError LispVal
+makeNormalFunc = makeFunc Nothing
+makeVarArgsFunc :: String -> Env -> [LispVal] -> [LispVal] -> IOThrowsLispError LispVal
+makeVarArgsFunc = makeFunc . Just . show
 
 getVar :: Env -> String -> IOThrowsLispError LispVal
 getVar envRef varName = do
@@ -68,9 +85,18 @@ defineVar envRef varName val = do
                     writeIORef envRef ((varName, newBind):env)
                     return val)
 
--- to be used later...
--- bindVars :: Env -> [(String, LispVal)] -> IO Env
--- bindVars = undefined
+bindVars :: Env -> [(String, LispVal)] -> IO Env
+bindVars envRef bindings = readIORef envRef >>= extendEnv bindings >>= newIORef
+  where
+    extendEnv :: [(String, LispVal)] -> [(String, IORef LispVal)] -> IO [(String, IORef LispVal)]
+    extendEnv newBindings env = liftM (++env) (mapM addBinding newBindings)
+    addBinding :: (String, LispVal) -> IO (String, IORef LispVal)
+    addBinding (name, val) = do ref <- newIORef val
+                                return (name, ref)
+
+primitivesEnv :: IO Env
+primitivesEnv = newIORef [] >>= (flip bindVars $ map makeLispVal primitives)
+  where makeLispVal (name, fn) = (name, PrimativeFunc fn)
 
 primitives :: [(String, [LispVal] -> ThrowsLispError LispVal)]
 primitives = [("+", closedBinaryNumeric (+) (+)),

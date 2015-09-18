@@ -1,5 +1,5 @@
 module LispVal
-(LispVal (..),
+(LispVal (..), Env,
 LispError (..), ThrowsLispError, extractValue, IOThrowsLispError, liftThrows
 ) where
 
@@ -7,6 +7,9 @@ import Data.Array
 import Data.IORef (IORef)
 import Control.Monad.Except (ExceptT (ExceptT), throwError)
 import Text.ParserCombinators.Parsec (ParseError)
+
+
+type Env = IORef [(String, IORef LispVal)]
 
 data LispVal = List [LispVal]
              | Atom String
@@ -16,6 +19,10 @@ data LispVal = List [LispVal]
              | String String
              | Bool Bool
              | Character Char
+             | PrimativeFunc ([LispVal] -> ThrowsLispError LispVal)
+             | Func {params :: [String], vararg :: (Maybe String),
+                  body :: [LispVal], closure :: Env}
+             -- | Vector (Array Integer LispVal)
 
 showVal :: LispVal -> String
 showVal (Atom x) = x
@@ -28,6 +35,12 @@ showVal (Character ch) = "#\\" ++ [ch]
 showVal (List xs) = "(" ++ (unwords . map showVal $ xs) ++ ")"
 showVal (DottedList xs expr) =
   "(" ++ (unwords . map showVal $ xs) ++ " . " ++ (show expr) ++ ")"
+showVal (PrimativeFunc _) = "<primative>"
+showVal (Func {params = args, vararg = vararg}) =
+  "((lambda " ++ unwords (map show args) ++
+      (case vararg of
+         Nothing -> ""
+         Just arg -> " . " ++ arg) ++ ") ...)"
 -- showVal (Vector xs) = "#(" ++ (unwords . map showVal . elems $ xs) ++ ")"
 
 instance Show LispVal where show = showVal
