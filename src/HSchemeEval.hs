@@ -1,7 +1,6 @@
 module HSchemeEval (eval, Env) where
 
-import HSchemeParse.LispVal
-import LispError
+import LispVal
 import Control.Monad.Except
 import Control.Monad
 import Data.IORef (IORef, readIORef, writeIORef, newIORef)

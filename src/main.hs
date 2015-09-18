@@ -2,7 +2,7 @@ import Text.ParserCombinators.Parsec (parse)
 import Control.Monad.Except (catchError, throwError, runExceptT)
 import HSchemeParse
 import HSchemeEval
-import LispError
+import LispVal
 import System.Console.Haskeline
   (runInputT, InputT, defaultSettings, getInputLine, outputStrLn)
 import Data.IORef (IORef, newIORef)

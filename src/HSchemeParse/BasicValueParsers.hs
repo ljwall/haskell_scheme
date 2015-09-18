@@ -10,7 +10,7 @@ module HSchemeParse.BasicValueParsers
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric
 import Data.Char
-import HSchemeParse.LispVal
+import LispVal
 
 spaces :: Parser ()
 spaces = skipMany1 space

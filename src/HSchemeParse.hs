@@ -1,11 +1,8 @@
-module HSchemeParse
-(LispVal (..)
-,parseExpr
-) where
+module HSchemeParse (parseExpr) where
 
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Array
-import HSchemeParse.LispVal
+import LispVal
 import HSchemeParse.BasicValueParsers
 
 parseExprSeq :: Parser [LispVal]
