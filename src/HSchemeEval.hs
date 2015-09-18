@@ -63,11 +63,6 @@ getVar envRef varName = do
         (liftIO . readIORef)
         (lookup varName env)
 
-isBound :: Env -> String -> IO Bool
-isBound envRef varName = do
-  env <- readIORef envRef
-  return $ maybe False (\_ -> True) (lookup varName env)
-
 setVar :: Env -> String -> LispVal -> IOThrowsLispError LispVal
 setVar envRef varName val = do
    env <- liftIO $ readIORef envRef
@@ -76,14 +71,12 @@ setVar envRef varName val = do
          (lookup varName env)
 
 defineVar :: Env -> String -> LispVal -> IOThrowsLispError LispVal
-defineVar envRef varName val = do
-  bound <- liftIO $ isBound envRef varName
-  if (bound)
-    then setVar envRef varName val
-    else liftIO (do env <- readIORef envRef
-                    newBind <- newIORef val
-                    writeIORef envRef ((varName, newBind):env)
-                    return val)
+defineVar envRef varName val =
+  liftIO (do env <- readIORef envRef
+             newBind <- newIORef val
+             writeIORef envRef ((varName, newBind):(filterExisting env))
+             return val)
+    where filterExisting = filter (\(name, _) -> name /= varName)
 
 bindVars :: Env -> [(String, LispVal)] -> IO Env
 bindVars envRef bindings = readIORef envRef >>= extendEnv bindings >>= newIORef
