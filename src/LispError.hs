@@ -1,8 +1,10 @@
 module LispError
-(LispError (..), ThrowsLispError, extractValue) where
+(LispError (..), ThrowsLispError, extractValue, IOThrowsLispError, liftThrows) where
 
 import HSchemeParse.LispVal
 import Text.ParserCombinators.Parsec
+import Data.IORef (IORef)
+import Control.Monad.Except (ExceptT (ExceptT), throwError)
 
 data LispError = NumArgs Integer [LispVal]
                | TypeMismatch String LispVal
@@ -26,6 +28,11 @@ showError (Default msg) = msg
 instance Show LispError where show = showError
 
 type ThrowsLispError = Either LispError
+type IOThrowsLispError = ExceptT LispError IO
+
+liftThrows :: ThrowsLispError a ->  IOThrowsLispError a
+liftThrows (Left err) = throwError err
+liftThrows (Right x) = return x
 
 extractValue :: ThrowsLispError a -> a
 extractValue (Right val) = val

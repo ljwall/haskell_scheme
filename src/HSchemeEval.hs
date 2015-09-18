@@ -1,34 +1,77 @@
-module HSchemeEval (eval) where
+module HSchemeEval (eval, Env) where
 
 import HSchemeParse.LispVal
 import LispError
 import Control.Monad.Except
 import Control.Monad
+import Data.IORef (IORef, readIORef, writeIORef, newIORef)
 
-eval :: LispVal -> ThrowsLispError LispVal
-eval val@(Integer _) = return val
-eval val@(Float _) = return val
-eval val@(String _) = return val
-eval val@(Bool _) = return val
-eval val@(Character _) = return val
-eval (List [Atom "quote", val]) = return val
+type Env = IORef [(String, IORef LispVal)]
 
-eval (List [Atom "if", predicate, trueExpr, falseExpr]) =
-  do b <- eval predicate
+eval :: Env -> LispVal -> IOThrowsLispError LispVal
+eval _ val@(Integer _) = return val
+eval _ val@(Float _) = return val
+eval _ val@(String _) = return val
+eval _ val@(Bool _) = return val
+eval _ val@(Character _) = return val
+eval _ (List [Atom "quote", val]) = return val
+
+eval env (List [Atom "if", predicate, trueExpr, falseExpr]) =
+  do b <- eval env predicate
      case b of
-       Bool True -> eval trueExpr
-       Bool False -> eval falseExpr
+       Bool True -> eval env trueExpr
+       Bool False -> eval env falseExpr
        x -> throwError $ TypeMismatch "Bool" x
 
-eval (List ((Atom func):args)) = (mapM eval $ args) >>= apply func
+eval env (Atom x) = getVar env x
+eval env (List ((Atom "define"):(Atom varName):expr:[])) =
+  eval env expr >>= defineVar env varName
 
-eval x = throwError $ Default $ "Much bafflement evaluating " ++ (show x)
+eval env (List ((Atom "set!"):(Atom varName):expr:[])) =
+  eval env expr >>= setVar env varName
 
-apply :: String -> [LispVal] -> ThrowsLispError LispVal
-apply func args =
+eval env (List ((Atom func):args)) = (mapM (eval env) $ args) >>= apply env func
+
+eval _ x = throwError $ Default $ "Much bafflement evaluating " ++ (show x)
+
+apply :: Env -> String -> [LispVal] -> IOThrowsLispError LispVal
+apply _ func args =
   case (lookup func primitives) of
-    Just fn -> fn args
+    Just fn -> liftThrows $ fn args
     Nothing -> throwError $ NotFunction "Unrecognised function" func
+
+getVar :: Env -> String -> IOThrowsLispError LispVal
+getVar envRef varName = do
+  env <- liftIO $ readIORef envRef
+  maybe (throwError $ UnboundVar "Variable not bound" varName)
+        (liftIO . readIORef)
+        (lookup varName env)
+
+isBound :: Env -> String -> IO Bool
+isBound envRef varName = do
+  env <- readIORef envRef
+  return $ maybe False (\_ -> True) (lookup varName env)
+
+setVar :: Env -> String -> LispVal -> IOThrowsLispError LispVal
+setVar envRef varName val = do
+   env <- liftIO $ readIORef envRef
+   maybe (throwError $ UnboundVar "Cannot set! unbound variable" varName)
+         (\varIORef -> liftIO (writeIORef varIORef val) >> return val)
+         (lookup varName env)
+
+defineVar :: Env -> String -> LispVal -> IOThrowsLispError LispVal
+defineVar envRef varName val = do
+  bound <- liftIO $ isBound envRef varName
+  if (bound)
+    then setVar envRef varName val
+    else liftIO (do env <- readIORef envRef
+                    newBind <- newIORef val
+                    writeIORef envRef ((varName, newBind):env)
+                    return val)
+
+-- to be used later...
+-- bindVars :: Env -> [(String, LispVal)] -> IO Env
+-- bindVars = undefined
 
 primitives :: [(String, [LispVal] -> ThrowsLispError LispVal)]
 primitives = [("+", closedBinaryNumeric (+) (+)),
@@ -70,7 +113,6 @@ primitives = [("+", closedBinaryNumeric (+) (+)),
               ("string", string),
               ("string-length", stringLength),
               ("string-ref", stringRef)]
-
 
 string :: [LispVal] -> ThrowsLispError LispVal
 string xs = foldM strAppend "" xs >>= (return . String)
@@ -224,6 +266,7 @@ isChar _ = Bool False
 
 type BinOp a = (a -> a -> a)
 closedBinaryNumeric :: (BinOp Float) -> (BinOp Integer) -> [LispVal] -> ThrowsLispError LispVal
+closedBinaryNumeric _ _ [] = throwError $ Default "Expected at least one paramter"
 closedBinaryNumeric floatOp integerOp xs =
   case (head xs) of
     x@(Integer _) -> do unpacked_xs <- (mapM unpackInteger xs)
