@@ -1,4 +1,3 @@
-import Text.ParserCombinators.Parsec (parse)
 import Control.Monad.Except (catchError, throwError, runExceptT)
 import HSchemeParse
 import HSchemeEval
@@ -7,12 +6,6 @@ import System.Console.Haskeline
   (runInputT, InputT, defaultSettings, getInputLine, outputStrLn)
 import Data.IORef (IORef, newIORef)
 import Control.Monad.IO.Class (liftIO)
-
-readExpr :: String -> ThrowsLispError LispVal
-readExpr expression =
-  case parse parseExpr "lisp" expression of
-    Left err -> throwError . Parser $ err
-    Right val -> return val
 
 convertError :: ThrowsLispError LispVal -> LispVal
 convertError val = extractValue $ val `catchError` (\err -> return . String $ show err)

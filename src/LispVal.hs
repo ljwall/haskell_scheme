@@ -3,10 +3,10 @@ module LispVal
 LispError (..), ThrowsLispError, extractValue, IOThrowsLispError, liftThrows
 ) where
 
-import Data.Array
+-- import Data.Array
 import Data.IORef (IORef)
 import Control.Monad.Except (ExceptT (ExceptT), throwError)
-import Text.ParserCombinators.Parsec (ParseError)
+import System.IO (Handle)
 
 
 type Env = IORef [(String, IORef LispVal)]
@@ -22,6 +22,8 @@ data LispVal = List [LispVal]
              | PrimativeFunc ([LispVal] -> ThrowsLispError LispVal)
              | Func {params :: [String], vararg :: (Maybe String),
                   body :: [LispVal], closure :: Env}
+             | IOFunc ([LispVal] -> IOThrowsLispError LispVal)
+             | Port Handle
              -- | Vector (Array Integer LispVal)
 
 showVal :: LispVal -> String
@@ -41,6 +43,8 @@ showVal (Func {params = args, vararg = vararg}) =
       (case vararg of
          Nothing -> ""
          Just arg -> " . " ++ arg) ++ ") ...)"
+showVal (IOFunc _) = "<IO primative>"
+showVal (Port _) = "<IO port>"
 -- showVal (Vector xs) = "#(" ++ (unwords . map showVal . elems $ xs) ++ ")"
 
 instance Show LispVal where show = showVal
@@ -48,7 +52,7 @@ instance Show LispVal where show = showVal
 
 data LispError = NumArgs Integer [LispVal]
                | TypeMismatch String LispVal
-               | Parser ParseError
+               | Parser String
                | BadSpecialForm String LispVal
                | NotFunction String String
                | UnboundVar String String
@@ -59,7 +63,7 @@ showError (NumArgs expected found) = "Expected " ++ show expected
                                    ++ " args; found values " ++ unwords (map show found)
 showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected
                                        ++ ", found " ++ show found
-showError (Parser parseErr) = "Parse error at " ++ show parseErr
+showError (Parser parseErr) = "Parse error at " ++ parseErr
 showError (BadSpecialForm message form) = message ++ ": " ++ show form
 showError (NotFunction message func) = message ++ ": " ++ func
 showError (UnboundVar message varname) = message ++ ": " ++ varname

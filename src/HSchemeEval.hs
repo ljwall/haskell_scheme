@@ -4,6 +4,8 @@ import LispVal
 import Control.Monad.Except
 import Control.Monad
 import Data.IORef (IORef, readIORef, writeIORef, newIORef)
+import System.IO (IOMode (..), openFile, hClose, stdin, hGetLine, stdout, hPrint, readFile)
+import HSchemeParse
 
 eval :: Env -> LispVal -> IOThrowsLispError LispVal
 eval _ val@(Integer _) = return val
@@ -43,6 +45,9 @@ eval env (List ((Atom "define"):(Atom varName):expr:[])) =
 eval env (List ((Atom "set!"):(Atom varName):expr:[])) =
   eval env expr >>= setVar env varName
 
+eval env (List [Atom "load", String filename]) =
+  load filename >>= mapM (eval env) >>= (return . last)
+
 eval env (List (fnExpr:args)) = do
   fn <- eval env fnExpr
   evaldArgs <- (mapM (eval env) $ args)
@@ -60,12 +65,13 @@ apply (Func params varargs body closure) args =
     remainingArgs :: [LispVal]
     remainingArgs = drop (length params) args
     bindVargs :: Env -> IOThrowsLispError Env
-    bindVargs envRef = do
-      case varargs of Just varg -> defineVar envRef varg (List remainingArgs)
-      return envRef
+    bindVargs envRef =
+      case varargs of Just varg -> do defineVar envRef varg (List remainingArgs)
+                                      return envRef
+                      Nothing -> return envRef
     evalBody :: Env -> IOThrowsLispError LispVal
     evalBody env = liftM last $ mapM (eval env) body
-
+apply (IOFunc fn) args = fn args
 apply nonFunc _ = throwError $ NotFunction "Does not evaluate to a function" (show nonFunc)
 
 makeFunc :: (Maybe String) -> Env -> [LispVal] -> [LispVal] -> IOThrowsLispError LispVal
@@ -108,8 +114,49 @@ bindVars envRef bindings = readIORef envRef >>= extendEnv bindings >>= newIORef
                                 return (name, ref)
 
 primitivesEnv :: IO Env
-primitivesEnv = newIORef [] >>= (flip bindVars $ map makeLispVal primitives)
-  where makeLispVal (name, fn) = (name, PrimativeFunc fn)
+primitivesEnv = newIORef [] >>= (flip bindVars $ map (makeLispVal PrimativeFunc) primitives
+                                              ++ map (makeLispVal IOFunc) ioPrimitives)
+  where makeLispVal constr (name, fn) = (name, constr fn)
+
+ioPrimitives :: [(String, [LispVal] -> IOThrowsLispError LispVal)]
+ioPrimitives = [("apply", applyProc),
+                ("open-input-file", makePort ReadMode),
+                ("open-output-file", makePort WriteMode),
+                ("close-input-port", closePort),
+                ("close-output-port", closePort),
+                ("read", readProc),
+                ("write", writeProc),
+                ("read-contents", readContents),
+                ("read-all", readAll)]
+
+applyProc :: [LispVal] -> IOThrowsLispError LispVal
+applyProc [func, (List args)] = apply func args
+applyProc (func:args) = apply func args
+
+makePort :: IOMode -> [LispVal] -> IOThrowsLispError LispVal
+makePort mode [String filename] = liftIO . liftM Port $ openFile filename mode
+
+closePort :: [LispVal] -> IOThrowsLispError LispVal
+closePort [Port handle] = liftIO $ hClose handle >> (return $ Bool True)
+closePort _ = return $ Bool False
+
+readProc :: [LispVal] -> IOThrowsLispError LispVal
+readProc [] = readProc [Port stdin]
+readProc [Port handle] = liftIO (hGetLine handle) >>= (liftThrows . readExpr)
+
+writeProc :: [LispVal] -> IOThrowsLispError LispVal
+writeProc [obj] = writeProc [obj, Port stdout]
+writeProc [obj, Port handle] = liftIO (hPrint handle obj) >> (return $ Bool True)
+
+readContents :: [LispVal] -> IOThrowsLispError LispVal
+readContents [String filename] = liftIO . liftM String $ readFile filename
+
+load :: String -> IOThrowsLispError [LispVal]
+load filename = liftIO (readFile filename) >>= (liftThrows . readExprList)
+
+readAll :: [LispVal] -> IOThrowsLispError LispVal
+readAll [String filename] = load filename >>= return . List
+
 
 primitives :: [(String, [LispVal] -> ThrowsLispError LispVal)]
 primitives = [("+", closedBinaryNumeric (+) (+)),
