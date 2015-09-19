@@ -25,7 +25,7 @@ main =
     where
       loop :: Env -> InputT IO ()
       loop env = do
-        minput <- getInputLine "hlisp>> "
+        minput <- getInputLine "hscheme>> "
         case minput of
           Nothing -> return ()
           Just "quit" -> return ()
