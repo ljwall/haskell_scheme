@@ -1,0 +1,15 @@
+(define (not x)
+  (if x #f #t))
+
+(define (list . args) args)
+
+(define (id x) x)
+
+(define (flip fn)
+  (lambda (a b) (fn b a)))
+
+(define (curry fn x)
+  (lambda xs (apply fn (cons x xs))))
+
+(define (compose f g)
+  (lambda (x) (f (g x)) ))
