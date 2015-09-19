@@ -25,8 +25,17 @@ eval env (Atom x) = getVar env x
 eval env (List (Atom "define" : List (Atom fnName : params) : body)) =
   makeNormalFunc env params body >>= defineVar env fnName
 
+eval env (List (Atom "define" : DottedList (Atom fnName : params) varargs : body)) =
+  makeVarArgsFunc varargs env params body >>= defineVar env fnName
+
 eval env (List (Atom "lambda" : List params : body)) =
   makeNormalFunc env params body
+
+eval env (List (Atom "lambda" : DottedList params varargs : body)) =
+  makeVarArgsFunc varargs env params body
+
+eval env (List (Atom "lambda" : varargs@(Atom _) : body)) =
+  makeVarArgsFunc varargs env [] body
 
 eval env (List ((Atom "define"):(Atom varName):expr:[])) =
   eval env expr >>= defineVar env varName
@@ -44,16 +53,26 @@ eval _ x = throwError $ Default $ "Much bafflement evaluating " ++ (show x)
 apply :: LispVal -> [LispVal] -> IOThrowsLispError LispVal
 apply (PrimativeFunc fn) args = liftThrows $ fn args
 apply (Func params varargs body closure) args =
-  (liftIO . bindVars closure $ zip params args) >>= evalBody
-    where evalBody :: Env -> IOThrowsLispError LispVal
-          evalBody env = liftM last $ mapM (eval env) body
+  if ((length args) < (length params)) || ((length args) > (length params) && varargs == Nothing)
+    then throwError $ NumArgs (toInteger $ length args) args
+    else (liftIO . bindVars closure $ zip params args) >>= bindVargs >>= evalBody
+  where
+    remainingArgs :: [LispVal]
+    remainingArgs = drop (length params) args
+    bindVargs :: Env -> IOThrowsLispError Env
+    bindVargs envRef = do
+      case varargs of Just varg -> defineVar envRef varg (List remainingArgs)
+      return envRef
+    evalBody :: Env -> IOThrowsLispError LispVal
+    evalBody env = liftM last $ mapM (eval env) body
+
 apply nonFunc _ = throwError $ NotFunction "Does not evaluate to a function" (show nonFunc)
 
 makeFunc :: (Maybe String) -> Env -> [LispVal] -> [LispVal] -> IOThrowsLispError LispVal
 makeFunc varargs env params body = return $ Func (map show params) varargs body env
 makeNormalFunc ::  Env -> [LispVal] -> [LispVal] -> IOThrowsLispError LispVal
 makeNormalFunc = makeFunc Nothing
-makeVarArgsFunc :: String -> Env -> [LispVal] -> [LispVal] -> IOThrowsLispError LispVal
+makeVarArgsFunc :: LispVal -> Env -> [LispVal] -> [LispVal] -> IOThrowsLispError LispVal
 makeVarArgsFunc = makeFunc . Just . show
 
 getVar :: Env -> String -> IOThrowsLispError LispVal
@@ -78,6 +97,7 @@ defineVar envRef varName val =
              return val)
     where filterExisting = filter (\(name, _) -> name /= varName)
 
+-- Creates *new* Env with additional variabke bound (for use on entering function calls)
 bindVars :: Env -> [(String, LispVal)] -> IO Env
 bindVars envRef bindings = readIORef envRef >>= extendEnv bindings >>= newIORef
   where
