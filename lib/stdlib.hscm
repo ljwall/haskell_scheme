@@ -13,3 +13,23 @@
 
 (define (compose f g)
   (lambda (x) (f (g x)) ))
+
+(define (odd? num) (= (mod num 2) 1))
+(define (even? num) (= (mod num 2) 0))
+
+(define head car)
+(define tail cdr)
+
+(define (null? lst) (eqv? '() lst))
+
+(define (foldr fn init xs)
+  (if (null? xs)
+    init
+    (fn (head xs) (foldr fn init (tail xs))) ))
+
+(define (foldl fn init xs)
+  (if (null? xs)
+    init
+    (foldl fn (fn init (head xs)) (tail xs))))
+
+(define (reverse xs) (foldl (flip cons) '() xs))
