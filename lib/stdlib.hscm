@@ -33,3 +33,12 @@
     (foldl fn (fn init (head xs)) (tail xs))))
 
 (define (reverse xs) (foldl (flip cons) '() xs))
+
+(define (unfold func init predicate)
+  (if (predicate init)
+    (cons init (unfold func (func init) predicate))
+    '()))
+
+(define (range from to . step)
+  (define s (if (null? step) 1 (head step)))
+  (unfold (curry + s) from (curry > to) ))
