@@ -42,3 +42,13 @@
 (define (range from to . step)
   (define s (if (null? step) 1 (head step)))
   (unfold (curry + s) from (curry > to) ))
+
+(define (map fn xs)
+  (foldr (lambda (x acc) (cons (fn x) acc)) '() xs))
+
+(define (filter predicate xs)
+  (define (fn x acc)
+    (if (predicate x)
+      (cons x acc)
+       acc))
+  (foldr fn '() xs))
