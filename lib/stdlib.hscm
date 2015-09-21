@@ -22,15 +22,14 @@
 
 (define (null? lst) (eqv? '() lst))
 
-(define (foldr fn init xs)
-  (if (null? xs)
-    init
-    (fn (head xs) (foldr fn init (tail xs))) ))
-
 (define (foldl fn init xs)
   (if (null? xs)
     init
     (foldl fn (fn init (head xs)) (tail xs))))
+
+(define (foldr fn init xs)
+  (define foo (foldl (lambda (fn_acc x) (compose fn_acc (curry fn x))) id xs))
+  (foo init))
 
 (define (reverse xs) (foldl (flip cons) '() xs))
 
@@ -52,3 +51,27 @@
       (cons x acc)
        acc))
   (foldr fn '() xs))
+
+(define (foldl1 fn xs) (foldl fn (head xs) (tail xs)))
+(define (foldr1 fn xs) (foldl1 (flip fn) (reverse xs)))
+
+(define (sum . xs) (foldl1 + xs))
+(define (product . xs) (foldl1 * xs))
+(define (and . xs) (foldl1 && xs))
+(define (or . xs) (foldl1 || xs))
+
+(define (length xs) (foldl (lambda (acc x) (+ acc 1)) 0 xs))
+
+(define (string->charlist str)
+  (map (curry string-ref str) (range 0 (string-length str))))
+
+(define (split-by sep xs)
+  (define (fn x acc)
+    (if (eqv? x sep)
+      (cons '() acc)
+      (cons (cons x (head acc)) (tail acc) )))
+  (foldr fn '(()) xs))
+
+(define (string-split-by sep str)
+  (map (curry apply string)
+       (split-by sep (string->charlist str)) ))
