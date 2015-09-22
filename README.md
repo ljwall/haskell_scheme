@@ -41,6 +41,18 @@ To create a list which is _not_ evaluted (e.g. to store some data) use the quote
 
 ### Special forms
 
+```Scheme
+(define foo "Hello")
+```
+
+Creates the variable `foo` in current scope. If `foo` is already defined in the current scope it overwrites the value. If `foo` is defined in an accessable parent scope then a new `foo` is created in the local scope, hiding `foo` from the parent scope and leaving it unaffected. Additially, `define` returns the value which has been set.
+
+```Scheme
+(set! foo 42)
+```
+
+Sets the variable `foo` to 42. `foo` should already be defined, either in the local scope or some parent scope.  `set!` will not create a new bindng - it's an error if `foo` is not already bound. 
+
 To be completed...
 
 ### Basic literals
