@@ -16,7 +16,7 @@ Build with the Glasgow Haskell Compiler using
 
 Running the binary (`bin/hscheme`) goes in to the REPL from where you can load and run other prepared scripts.
 
-## Laguage documentation
+## Language documentation
 
 Key features are:
 - Lexical scoping (for the most part, anyway) with _function_ scope.
