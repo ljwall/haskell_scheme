@@ -27,13 +27,17 @@ Key features are:
 Like other LISPs, Scheme is built around lists.  Code is expressed in lists, and lists are used as a data type.
 
 Lists are ued for function calls:
-```
+
+```Scheme
 (<fn_expr> <expr_1> <expr_2> .. <expr_n>)
 ```
 The list is evaluated by evaluating each term in the list.  The first term should evaluate to a function, whcih is called with the results of subsequent expressions applied as arguments.
 
 To create a list which is _not_ evaluted (e.g. to store some data) use the quoted list form:
-```'(1 2 3 4)```
+
+```Scheme
+'(1 2 3 4)
+```
 
 ### Special forms
 
