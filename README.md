@@ -24,7 +24,7 @@ Key features are:
 - Supports functional closures.
 - Dynamic strong typing.
 
-Like other LISPs, Scheme is built around lists.  Code is expressed in lists, and lists are used as a data type.
+As a LISP, Scheme is built around lists.  Code is expressed in lists, and lists are used as a data type.
 
 Lists are used for function calls:
 
@@ -104,7 +104,7 @@ To alter a value in a parent scope, use `set!`. Compare the functions `bar` and 
 ;; now foo is 42
 ```
 
-Note that, like `define`, `set!` also returns the set value
+Note that, like `define`, `set!` also returns the set value.
 
 The `lambda` form creates anonymous functions.
 
@@ -115,9 +115,9 @@ The `lambda` form creates anonymous functions.
 These can be used to pass to other functions, or as function return values. For example
 
 ```Scheme
-(define (inrementer N)
+(define (incrementer N)
   (lambda (x) (+ N x)))
-(define inc7 (inrementer 7))
+(define inc7 (incrementer 7))
 (inc7 2)
 ;; => 9
 (inc7 11)
@@ -165,13 +165,13 @@ Here's an example:
 
 See how `+`, `*`, and `-` can be passed to `do-something-with-2-and-5` and are bound to `func` within the body of `do-something-with-2-and-5`
 
-However the special forms described above are language constructs and cannot be bound to variable names or passed as in this example. Functions are vales, but special forms are not. Moreover they have special rules about how their argument are evaluated.  While every argument passed to function is always fully evaluated, this is not the case for special forms.
+However the special forms described above are language constructs and cannot be bound to variable names or passed around like in this example. Moreover they have special rules about how their argument are evaluated.  While every argument passed to function is always evaluated first, this is not the case for special forms.
 
 In the form `(if <pred_expr> <true_expr> <false_expr>)` only one of `<true_expr>` or `<false_expr>` will be evaluated.
 
 For `(define <var_name> <expr>)`, `<var_name>` cannot be evaluated before being passed to `define` - it is not yet defined!
 
-This may all seem obvious, or maybe not. Because of the list syntax, special forms and function calls look very similar. In other languages the syntax makes it very clear that function calls are different from variable declarations, function definitions, or control-flow.
+This may all seem obvious, or maybe not. Because of the list syntax, special forms and function calls look very similar. In other languages the syntax makes it very clear that function calls are different from variable declarations, function definitions, or control-flow. But in a lisp not so much.
 
 ### Functions
 
