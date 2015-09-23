@@ -140,7 +140,7 @@ The final special form is `load`.
 
 It reads and executes the given file.
 
-### What's special about special forms?
+#### What's special about special forms?
 
 First, consider functions. Functions, whether built-in or user defined with `define` or `lambda`, are all treated and evaluated in exactly the same way. They can be bound to variables, passed to and from other functions, stored in lists, etc... They are called using the form
 
@@ -174,6 +174,73 @@ For `(define <var_name> <expr>)`, `<var_name>` cannot be evaluated before being 
 This may all seem obvious, or maybe not. Because of the list syntax, special forms and function calls look very similar. In other languages the syntax makes it very clear that function calls are different from variable declarations, function definitions, or control-flow. But in a lisp not so much.
 
 ### Functions
+
+Functions which are not built-in, but are defined in the library `lib/stdlib.scm` are identified.
+
+#### Numerical functions
+
+```Scheme
+(= 3 3)
+;; => #t
+```
+
+```Scheme
+(> 2 3)
+;; => #f
+```
+
+There are similar comparison functions `<`, `>=`, and `<=`.
+
+```Scheme
+(+ 2 3)
+;; => 5
+```
+
+```Scheme
+(sum 1 2 3 4)
+;; => 10
+```
+
+`sum` is library function. Unlike `+` it takes arbitrarily many arguments.
+
+```Scheme
+(* 2 3)
+;; => 6
+```
+
+```Scheme
+(product 1 2 3 4)
+;; => 24
+```
+
+`product` is a library function. Unlike `*` it takes arbitrarily many arguments.
+
+```Scheme
+(- 2 5)
+;; => -3
+```
+
+```Scheme
+(/ 2.0 3.0)
+;; => 0.6666667
+```
+
+`/` only operates on floats.
+
+```Scheme
+(mod 10 4)
+;; => 2
+```
+
+```Scheme
+(quotent 11 3)
+;; => 3
+```
+
+```Scheme
+(remainder 11 3)
+;; => 2
+```
 
 ### Basic literals
 
