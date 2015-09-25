@@ -13,7 +13,10 @@ import Data.Char
 import LispVal
 
 spaces :: Parser ()
-spaces = skipMany1 space
+spaces = skipMany1 (space <|> comment)
+
+comment :: Parser Char
+comment = char ';' >> char ';' >> manyTill anyChar newline >> (return ' ')
 
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+-/:<=>?@^_~"
