@@ -164,6 +164,19 @@ Functions which are not built-in, but are defined in the library `lib/stdlib.scm
 ;; => (2 3 4)
 ```
 
+```Scheme
+;; cons adds an element to the front of a list
+(cons "Foo" '(1 2 3 4))
+;; => ("Foo" 1 2 3 4)
+```
+
+```Scheme
+(null? '(1 2 3 4))
+;; => #f
+(null? '())
+;; => #t
+```
+
 #### Numerical functions
 
 ```Scheme
