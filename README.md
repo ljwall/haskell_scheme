@@ -140,42 +140,29 @@ The final special form is `load`.
 
 It reads and executes the given file.
 
-#### What's special about special forms?
-
-First, consider functions. Functions, whether built-in or user defined with `define` or `lambda`, are all treated and evaluated in exactly the same way. They can be bound to variables, passed to and from other functions, stored in lists, etc... They are called using the form
-
-```Scheme
-(<fn_expr> <expr_1> <expr_2> ... <expr_n>)
-```
-
-where `<fn_expr>` should evaluate to a function, and the expressions `<expr_1>` to `<expr_n>` are _first_ evaluated and _then_ passed as arguments to (the evaluation of) `<fn_expr>`.
-
-Here's an example:
-
-```Scheme
-(define (do-something-with-2-and-5 func)
-  (func 2 5))
-(do-something-with-2-and-5 +)
-;; => 7
-(do-something-with-2-and-5 *)
-;; => 10
-(do-something-with-2-and-5 -)
-;; => -3
-```
-
-See how `+`, `*`, and `-` can be passed to `do-something-with-2-and-5` and are bound to `func` within the body of `do-something-with-2-and-5`
-
-However the special forms described above are language constructs and cannot be bound to variable names or passed around like in this example. Moreover they have special rules about how their argument are evaluated.  While every argument passed to function is always evaluated first, this is not the case for special forms.
-
-In the form `(if <pred_expr> <true_expr> <false_expr>)` only one of `<true_expr>` or `<false_expr>` will be evaluated.
-
-For `(define <var_name> <expr>)`, `<var_name>` cannot be evaluated before being passed to `define` - it is not yet defined!
-
-This may all seem obvious, or maybe not. Because of the list syntax, special forms and function calls look very similar. In other languages the syntax makes it very clear that function calls are different from variable declarations, function definitions, or control-flow. But in a lisp not so much.
-
 ### Functions
 
 Functions which are not built-in, but are defined in the library `lib/stdlib.scm` are identified.
+
+#### List functions
+
+```Scheme
+;; car get the first element of a list
+(car '(1 2 3 4))
+;; => 1
+;; It's also aliased to head in in lib/stdlib.scm
+(head '(1 2 3 4))
+;; => 1
+```
+
+```Scheme
+;; cdr gets the rest of a list
+(cdr '(1 2 3 4))
+;; => (2 3 4)
+;; It's also aliased to tail in in lib/stdlib.scm
+(tail '(1 2 3 4))
+;; => (2 3 4)
+```
 
 #### Numerical functions
 
